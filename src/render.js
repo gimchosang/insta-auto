@@ -41,6 +41,7 @@ const DEFAULT_STYLE = {
   stroke: '#FFFFFF',
   hit: '#0B5C46',
   hitStroke: '#FFFFFF',
+  hitText: '#FFFFFF', // 강조 박스 안의 글자색 (자막 템플릿용)
   font: 'jua',
 };
 
@@ -150,8 +151,9 @@ export async function renderSlides(account, content, dateStr, rootDir) {
 
     for (let i = 0; i < total; i++) {
       const slide = content.slides[i];
-      // 1장은 계정 고유의 후킹 템플릿, 2장부터는 공통 본문 템플릿
-      const templateName = slide.kind === 'hook' ? account.template : 'body';
+      // 1장은 계정 고유의 후킹 템플릿, 2장부터는 본문 템플릿
+      // (bodyTemplate 를 지정하면 자막 스타일 등으로 바꿀 수 있습니다)
+      const templateName = slide.kind === 'hook' ? account.template : account.bodyTemplate ?? 'body';
       const raw = await readTemplate(templateName);
 
       const html = fillTemplate(raw, {
@@ -160,6 +162,7 @@ export async function renderSlides(account, content, dateStr, rootDir) {
         stroke: style.stroke,
         hit: style.hit,
         hitStroke: style.hitStroke,
+        hitText: style.hitText,
         fontFamily: font.family,
         fontUrl: font.url,
         lines: buildLines(slide.lines, slide.emphasizeLine),

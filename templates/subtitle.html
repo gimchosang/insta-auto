@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="{{fontUrl}}">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1080px; }
+  body {
+    background: {{bg}};
+    font-family: {{fontFamily}};
+    display: flex;
+    flex-direction: column;
+    padding: 80px 64px 66px;
+    overflow: hidden;
+  }
+
+  /* 은은한 배경 결 — 사진 없이도 밋밋하지 않게 */
+  body::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(circle at 20% 15%, rgba(255,255,255,.06), transparent 45%),
+      radial-gradient(circle at 82% 88%, rgba(0,0,0,.18), transparent 50%);
+  }
+
+  .num {
+    position: absolute;
+    top: 40px; right: 52px;
+    font-size: 40px;
+    color: {{hit}};
+    opacity: .75;
+    z-index: 2;
+  }
+
+  /* 방송 자막처럼 줄마다 박스를 씌웁니다 */
+  #stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 22px;
+    z-index: 2;
+  }
+  .ln {
+    align-self: flex-start;
+    max-width: 100%;
+    background: rgba(0, 0, 0, .84);
+    color: #FFFFFF;
+    padding: 18px 30px 22px;
+    border-radius: 6px;
+    white-space: nowrap;
+    letter-spacing: -.02em;
+    line-height: 1.1;
+  }
+  .ln.hit {
+    background: {{hit}};
+    color: {{hitText}};
+  }
+
+  .dots { display: flex; gap: 12px; z-index: 2; padding-top: 34px; }
+  .dots i {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: #FFFFFF; opacity: .28;
+  }
+  .dots i.on { opacity: .95; }
+</style>
+</head>
+<body>
+  <div class="num">{{slideNo}}</div>
+  <div id="stage">{{lines}}</div>
+  <div class="dots">{{dots}}</div>
+
+<script>
+// 가장 긴 줄이 화면에 들어가는 최대 크기를 찾습니다.
+// 자막 박스는 줄마다 폭이 달라야 자연스러우므로 nowrap 을 유지합니다.
+(function () {
+  const stage = document.getElementById('stage');
+  const lines = [...stage.querySelectorAll('.ln')];
+  const maxW = 1080 - 128;
+
+  function fits(size) {
+    lines.forEach((l) => (l.style.fontSize = size + 'px'));
+    if (stage.scrollHeight > stage.clientHeight) return false;
+    return lines.every((l) => l.scrollWidth <= maxW);
+  }
+
+  function fit() {
+    let size = 92;
+    while (size > 26 && !fits(size)) size -= 2;
+    fits(size);
+    window.__READY__ = true;
+  }
+
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+  else window.addEventListener('load', fit);
+})();
+</script>
+</body>
+</html>
