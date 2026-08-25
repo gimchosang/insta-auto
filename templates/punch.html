@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="{{fontUrl}}">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1080px; }
+  body {
+    background: {{bg}};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 70px 60px;
+    overflow: hidden;
+  }
+
+  /* 텍스트가 화면을 꽉 채웁니다. 장식은 넣지 않습니다. */
+  #stage {
+    width: 100%;
+    text-align: center;
+    font-family: {{fontFamily}};
+    color: {{fg}};
+    line-height: 1.16;
+    letter-spacing: -.01em;
+    /* 흰 테두리를 글자 뒤쪽에 깔아 작은 썸네일에서도 형태가 살아납니다 */
+    -webkit-text-stroke: 14px {{stroke}};
+    paint-order: stroke fill;
+  }
+  .ln { white-space: nowrap; }
+
+  /* 강조 줄 — 색을 뒤집어 시선을 잡습니다 */
+  .ln.hit { color: {{hit}}; }
+
+  #handle {
+    position: absolute;
+    bottom: 30px;
+    right: 38px;
+    font-family: {{fontFamily}};
+    font-size: 26px;
+    color: {{fg}};
+    opacity: .38;
+    -webkit-text-stroke: 0;
+  }
+</style>
+</head>
+<body>
+  <div id="stage">{{lines}}</div>
+  <div id="handle">{{handle}}</div>
+
+<script>
+// 글자를 최대한 키워서 화면을 채웁니다.
+// 가로는 가장 긴 줄, 세로는 전체 높이를 기준으로 잡습니다.
+(function () {
+  const stage = document.getElementById('stage');
+  const lines = [...stage.querySelectorAll('.ln')];
+
+  const maxW = 1080 - 120;   // 좌우 패딩
+  const maxH = 1080 - 140;   // 상하 패딩
+
+  function fits(size) {
+    stage.style.fontSize = size + 'px';
+    stage.style.webkitTextStroke = Math.max(4, Math.round(size * 0.085)) + 'px {{stroke}}';
+    if (stage.scrollHeight > maxH) return false;
+    return lines.every((l) => l.scrollWidth <= maxW);
+  }
+
+  function fit() {
+    // 큰 값에서 내려오며 들어가는 가장 큰 크기를 찾습니다
+    let size = 230;
+    while (size > 40 && !fits(size)) size -= 4;
+    fits(size);
+    window.__READY__ = true;
+  }
+
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+  else window.addEventListener('load', fit);
+})();
+</script>
+</body>
+</html>

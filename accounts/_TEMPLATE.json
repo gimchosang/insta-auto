@@ -1,0 +1,60 @@
+{
+  "_readme": [
+    "계정을 늘릴 때 이 파일을 복사해서 쓰세요.",
+    "",
+    "지역 클러스터 복제 예시 (회기 = 경희대·외대·시립대):",
+    "  1. 이 파일을 accounts/hoegi-campus.json 으로 복사",
+    "  2. id, displayName, secrets 이름만 교체",
+    "  3. source.region 을 동대문구 정보로 교체",
+    "  4. GitHub Secrets에 토큰 2개 추가",
+    "  → 코드는 한 줄도 안 건드립니다.",
+    "",
+    "유머 클러스터 복제는 persona.who / voice / topics 만 바꾸면 됩니다.",
+    "",
+    "publishAt 은 KST(한국시간) 기준 24시간제입니다.",
+    "같은 시각에 계정이 몰리지 않게 30분 이상 벌려두세요.",
+    "enabled 를 false 로 두면 발행에서 제외됩니다 (워밍업 기간에 유용)."
+  ],
+
+  "id": "new-account-id",
+  "displayName": "새 계정 이름",
+  "enabled": false,
+  "cluster": "humor",
+
+  "template": "punch",
+  "_style_readme": [
+    "계정의 정체성은 색 조합이 만듭니다. 계정마다 확실히 다른 조합을 쓰세요.",
+    "bg=배경, fg=글자, stroke=글자 테두리, hit=강조줄 색",
+    "보색으로 세게 대비시켜야 작은 썸네일에서 읽힙니다.",
+    "font: jua(동글) / blackhan(묵직) / dohyeon(각짐) / gaegu(손글씨)"
+  ],
+  "style": {
+    "bg": "#7FE8C4",
+    "fg": "#FF6FA5",
+    "stroke": "#FFFFFF",
+    "hit": "#FFFFFF",
+    "font": "jua"
+  },
+  "publishAt": "21:00",
+  "jitterMinutes": 25,
+
+  "source": { "type": "ai" },
+
+  "persona": {
+    "who": "누구의 목소리인가 (구체적일수록 좋음)",
+    "voice": "말투와 문장 리듬",
+    "avoid": "쓰지 말아야 할 것",
+    "topics": ["소재1", "소재2", "소재3"]
+  },
+
+  "hashtags": {
+    "fixed": ["#고정해시태그"],
+    "poolSize": 5,
+    "pool": ["#풀에서", "#매번", "#랜덤으로", "#뽑아씁니다"]
+  },
+
+  "secrets": {
+    "token": "IG_TOKEN_NEW_ACCOUNT",
+    "userId": "IG_USER_ID_NEW_ACCOUNT"
+  }
+}

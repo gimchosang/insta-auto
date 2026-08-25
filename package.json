@@ -1,0 +1,17 @@
+{
+  "name": "insta-auto",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "인스타그램 다계정 자동 발행 파이프라인",
+  "scripts": {
+    "run": "node src/index.js",
+    "preview": "node src/index.js --dry-run"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

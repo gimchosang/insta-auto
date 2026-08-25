@@ -1,0 +1,61 @@
+name: 토큰 갱신
+
+# Instagram 장기 토큰은 60일마다 만료됩니다.
+# 2주에 한 번 갱신해서 한두 번 실패해도 만료되지 않도록 여유를 둡니다.
+#
+# ※ 이 워크플로만 별도의 PAT 이 필요합니다.
+#    기본 GITHUB_TOKEN 은 시크릿을 수정할 권한이 없기 때문입니다.
+#    GitHub Settings → Developer settings → Personal access tokens
+#    → Fine-grained token → 이 레포에 "Secrets: Read and write" 권한
+#    → 레포 시크릿에 GH_PAT 로 저장
+
+on:
+  schedule:
+    - cron: '0 3 1,15 * *' # 매월 1일·15일 (UTC 03:00 = 한국 12:00)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 토큰 갱신
+        env:
+          ALL_SECRETS: ${{ toJSON(secrets) }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: node src/refresh-tokens.js
+
+      - name: 실패 시 이슈 생성
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '토큰 갱신 실패 — 수동 조치 필요',
+              labels: ['token'],
+              body: [
+                '토큰 갱신 워크플로가 실패했습니다.',
+                '',
+                '**토큰은 60일 후 만료되므로 그 전에 조치해야 합니다.**',
+                '',
+                `실행 로그: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                '',
+                '자주 있는 원인:',
+                '- `GH_PAT` 시크릿이 없거나 만료됨',
+                '- 토큰이 이미 만료되어 갱신 불가 → Meta 콘솔에서 재발급 필요',
+                '- 발급 후 24시간이 지나지 않음 (그 전에는 갱신 불가)',
+              ].join('\n'),
+            });

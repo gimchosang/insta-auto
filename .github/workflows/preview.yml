@@ -1,0 +1,88 @@
+name: 미리보기 (발행 안 함)
+
+# 실제 인스타 계정이나 토큰 없이도 카드가 어떻게 나오는지 확인합니다.
+# Actions 탭 → "미리보기" → Run workflow 버튼을 누르면 됩니다.
+# 결과 이미지는 실행 페이지 맨 아래 Artifacts 에서 내려받을 수 있습니다.
+
+on:
+  workflow_dispatch:
+    inputs:
+      account:
+        description: '미리볼 계정'
+        type: choice
+        required: true
+        default: 'all'
+        options:
+          - all
+          - univ-humor
+          - office-humor
+          - solo-life
+          - seongbuk-campus
+      count:
+        description: '계정당 생성 횟수 (한 번에 캐러셀 4~5장이 나옵니다)'
+        type: choice
+        default: '1'
+        options: ['1', '2', '3']
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm install --no-audit --no-fund
+
+      - name: 한글 폰트 설치
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-nanum fonts-noto-cjk
+          sudo fc-cache -f
+
+      - run: npx playwright install --with-deps chromium
+
+      - name: 카드 생성
+        env:
+          ALL_SECRETS: ${{ toJSON(secrets) }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+        run: |
+          set -o pipefail
+          ACCOUNT_ARG=""
+          if [ "${{ inputs.account }}" != "all" ]; then
+            ACCOUNT_ARG="--account=${{ inputs.account }}"
+          fi
+
+          for i in $(seq 1 ${{ inputs.count }}); do
+            echo "===== 회차 $i ====="
+            # FILE_SUFFIX 로 회차마다 다른 파일명을 만들어 덮어쓰기를 막습니다.
+            # 일부 계정이 실패해도(예: SEOUL_API_KEY 미설정) 나머지 카드는 받아볼 수 있도록
+            # 여기서는 실패를 삼킵니다. 원인은 로그와 요약에 그대로 남습니다.
+            FILE_SUFFIX="$i" node src/index.js --dry-run --force $ACCOUNT_ARG 2>&1 | tee -a preview.log || true
+          done
+
+      - name: 실행 요약에 문구 표시
+        if: always()
+        run: |
+          {
+            echo "## 생성된 문구"
+            echo ""
+            echo '```'
+            cat preview.log 2>/dev/null || echo "(로그 없음)"
+            echo '```'
+            echo ""
+            echo "이미지는 아래 **Artifacts** 에서 내려받으세요."
+          } >> $GITHUB_STEP_SUMMARY
+
+      - name: 이미지 업로드
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-cards
+          path: docs/img/**/*.jpg
+          if-no-files-found: warn
+          retention-days: 7

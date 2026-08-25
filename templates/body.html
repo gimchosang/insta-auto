@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="{{fontUrl}}">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1080px; }
+  body {
+    background: {{bg}};
+    font-family: {{fontFamily}};
+    display: flex;
+    flex-direction: column;
+    padding: 72px 66px 60px;
+    overflow: hidden;
+  }
+
+  /* 번호는 장식이 아니라 진행 표시입니다. 몇 장 남았는지 알려줍니다. */
+  .num {
+    align-self: flex-start;
+    font-size: 84px;
+    color: {{hit}};
+    -webkit-text-stroke: 9px {{stroke}};
+    paint-order: stroke fill;
+    line-height: 1;
+  }
+
+  #stage {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    color: {{fg}};
+    line-height: 1.22;
+    letter-spacing: -.015em;
+    -webkit-text-stroke: 11px {{stroke}};
+    paint-order: stroke fill;
+    padding: 30px 0;
+  }
+  .ln { white-space: nowrap; }
+  .ln.hit { color: {{hit}}; }
+
+  .dots { display: flex; gap: 12px; }
+  .dots i {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: {{fg}}; opacity: .22;
+  }
+  .dots i.on { opacity: .85; }
+</style>
+</head>
+<body>
+  <div class="num">{{slideNo}}</div>
+  <div id="stage"><div>{{lines}}</div></div>
+  <div class="dots">{{dots}}</div>
+
+<script>
+(function () {
+  const stage = document.getElementById('stage');
+  const lines = [...stage.querySelectorAll('.ln')];
+  const maxW = 1080 - 132;
+
+  function fits(size) {
+    stage.style.fontSize = size + 'px';
+    stage.style.webkitTextStroke = Math.max(4, Math.round(size * 0.075)) + 'px {{stroke}}';
+    if (stage.firstElementChild.scrollHeight > stage.clientHeight - 30) return false;
+    return lines.every((l) => l.scrollWidth <= maxW);
+  }
+
+  function fit() {
+    let size = 150;
+    while (size > 32 && !fits(size)) size -= 3;
+    fits(size);
+    window.__READY__ = true;
+  }
+
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+  else window.addEventListener('load', fit);
+})();
+</script>
+</body>
+</html>

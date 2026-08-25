@@ -1,0 +1,64 @@
+{
+  "id": "seongbuk-campus",
+  "displayName": "성북 대학가",
+  "enabled": true,
+  "cluster": "local",
+
+  "template": "local-punch",
+  "style": {
+    "bg": "#2B4FFF",
+    "fg": "#FFFFFF",
+    "stroke": "#0A1F8C",
+    "hit": "#FFE812",
+    "font": "dohyeon"
+  },
+  "publishAt": "18:00",
+  "jitterMinutes": 20,
+
+  "source": {
+    "type": "local",
+    "region": {
+      "gu": "성북구",
+      "guCode": "11290",
+      "landmarks": ["안암", "돈암", "정릉", "길음", "성신여대입구", "보문", "석관", "장위"],
+      "universities": [
+        { "name": "고려대학교", "station": "안암역", "area": "안암동" },
+        { "name": "성신여자대학교", "station": "성신여대입구역", "area": "돈암동" },
+        { "name": "한성대학교", "station": "한성대입구역", "area": "삼선동" },
+        { "name": "국민대학교", "station": "정릉", "area": "정릉동" },
+        { "name": "서경대학교", "station": "정릉", "area": "정릉동" },
+        { "name": "동덕여자대학교", "station": "월곡역", "area": "하월곡동" }
+      ],
+      "noticeRss": "https://www.sb.go.kr/main/rss/notice.do",
+      "seoulEventGuName": "성북구"
+    },
+    "campusWeight": 0.6
+  },
+
+  "persona": {
+    "who": "성북구 대학가를 매일 걸어다니는 사람. 정보를 전하되 홍보 티가 안 나게.",
+    "voice": "간결한 정보 전달. 대학생이 실제로 궁금해할 각도로 정리. 과장 광고 문구 금지.",
+    "avoid": "'꼭 가보세요', '강추', 별점, 광고 문구, 없는 사실 지어내기",
+    "topics": [
+      "구청 공식 행사·축제 안내",
+      "대학가 상권 정보",
+      "동네 생활 정보 (교통, 공사, 시설)",
+      "계절별 나들이 장소"
+    ]
+  },
+
+  "hashtags": {
+    "fixed": ["#성북구", "#안암", "#대학가"],
+    "poolSize": 6,
+    "pool": [
+      "#고려대", "#성신여대", "#한성대", "#국민대", "#돈암동",
+      "#정릉", "#길음", "#성북구맛집", "#안암맛집", "#고대앞",
+      "#서울나들이", "#성북구행사", "#대학생", "#동네정보", "#보문동"
+    ]
+  },
+
+  "secrets": {
+    "token": "IG_TOKEN_SEONGBUK_CAMPUS",
+    "userId": "IG_USER_ID_SEONGBUK_CAMPUS"
+  }
+}

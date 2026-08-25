@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="{{fontUrl}}">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1080px; }
+  body {
+    background: {{bg}};
+    font-family: {{fontFamily}};
+    display: flex;
+    flex-direction: column;
+    padding: 72px 62px 60px;
+    overflow: hidden;
+  }
+
+  /* 카테고리 — 배지 대신 굵은 글자와 밑줄만 */
+  .cat {
+    align-self: flex-start;
+    font-size: 44px;
+    color: {{hit}};
+    -webkit-text-stroke: 6px {{stroke}};
+    paint-order: stroke fill;
+    border-bottom: 9px solid {{hit}};
+    padding-bottom: 6px;
+  }
+
+  #stage {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    text-align: left;
+    font-family: {{fontFamily}};
+    color: {{fg}};
+    line-height: 1.18;
+    letter-spacing: -.015em;
+    -webkit-text-stroke: 13px {{stroke}};
+    paint-order: stroke fill;
+    padding: 26px 0;
+  }
+  .ln { white-space: nowrap; }
+
+  /* 정보는 표가 아니라 그냥 큰 글자로 */
+  .meta { display: flex; flex-direction: column; gap: 14px; }
+  .row { display: flex; align-items: baseline; gap: 18px; font-size: 38px; }
+  .key { flex: none; color: {{hit}}; }
+  .val { color: {{fg}}; opacity: .88; }
+
+  #handle {
+    margin-top: 26px;
+    font-size: 26px;
+    color: {{fg}};
+    opacity: .4;
+  }
+</style>
+</head>
+<body>
+  <div class="cat">{{tag}}</div>
+  <div id="stage"><div>{{lines}}</div></div>
+  <div class="meta">{{metaRows}}</div>
+  <div id="handle">{{handle}}</div>
+
+<script>
+(function () {
+  const stage = document.getElementById('stage');
+  const lines = [...stage.querySelectorAll('.ln')];
+  const maxW = 1080 - 124;
+
+  function fits(size) {
+    stage.style.fontSize = size + 'px';
+    stage.style.webkitTextStroke = Math.max(4, Math.round(size * 0.08)) + 'px {{stroke}}';
+    const inner = stage.firstElementChild;
+    if (inner.scrollHeight > stage.clientHeight - 30) return false;
+    return lines.every((l) => l.scrollWidth <= maxW);
+  }
+
+  function fit() {
+    let size = 150;
+    while (size > 34 && !fits(size)) size -= 3;
+    fits(size);
+    window.__READY__ = true;
+  }
+
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+  else window.addEventListener('load', fit);
+})();
+</script>
+</body>
+</html>
