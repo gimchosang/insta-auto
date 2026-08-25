@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { generateContent } from './generate.js';
 import { collectLocalItems, toMaterial } from './sources/local.js';
 import { collectFactArticle } from './sources/facts.js';
+import { collectNewsIssue } from './sources/news.js';
 import { renderSlides, publicUrl } from './render.js';
 import { publishPost, buildCaption, checkLimit } from './publish.js';
 import { credentialsFor } from './credentials.js';
@@ -99,6 +100,17 @@ async function runAccount(account, state, now) {
     console.log(`  · 문서: ${article.title} (${article.material.length}자, 시드 "${article.seed}")`);
   }
 
+  if (account.source?.type === 'news') {
+    const issue = await collectNewsIssue(account, entry.usedItemIds ?? []);
+    if (!issue) {
+      console.log('  · 발행할 만한 이슈가 없습니다 — 건너뜁니다');
+      return null;
+    }
+    material = issue;
+    sourceItem = { id: issue.key };
+    console.log(`  · 이슈: "${issue.key}" (${issue.outlets.join(', ')} 등 ${issue.outlets.length}개 매체)`);
+  }
+
   if (account.source?.type === 'local') {
     const items = await collectLocalItems(account);
     const usedIds = new Set(entry.usedItemIds ?? []);
@@ -115,6 +127,14 @@ async function runAccount(account, state, now) {
 
   // 2) 문구 생성
   const content = await generateContent(account, material, entry.recent ?? []);
+
+  // 필터를 통과했더라도 AI 가 부적합 판정하면 그날은 쉽니다.
+  // 다만 같은 이슈를 내일 또 집지 않도록 기록은 남깁니다.
+  if (content.skip) {
+    console.log(`  · AI 가 부적합 판정 — 건너뜁니다: ${content.reason}`);
+    return { account, sourceItem, published: false, rejected: true };
+  }
+
   console.log(`  · 후킹: ${content.slides[0].lines.join(' / ')}`);
 
   // 3) 카드 렌더링 (캐러셀 전체)
@@ -200,6 +220,14 @@ async function main() {
 
       const result = await runAccount(account, state, now);
       if (!result) continue;
+
+      // 부적합 판정된 이슈는 내일 다시 집히지 않게 기록만 남깁니다
+      if (result.rejected && result.sourceItem) {
+        const entry = state[account.id] ?? { recent: [] };
+        entry.usedItemIds = [result.sourceItem.id, ...(entry.usedItemIds ?? [])].slice(0, 200);
+        state[account.id] = entry;
+        continue;
+      }
 
       if (result.published) {
         const entry = state[account.id] ?? { recent: [] };

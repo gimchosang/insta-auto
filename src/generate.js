@@ -80,6 +80,25 @@ const FACTS_SCHEMA = {
   required: ['hook', 'body', 'caption'],
 };
 
+const NEWS_SCHEMA = {
+  type: 'object',
+  properties: {
+    suitable: {
+      type: 'boolean',
+      description: '이 이슈를 자동 발행해도 되는지. 조금이라도 걸리면 false.',
+    },
+    rejectReason: { type: 'string', description: 'false 인 이유. true 면 빈 문자열.' },
+    hook: slideSchema('1장에 들어갈 후킹 문구.', HOOK_MAX),
+    body: {
+      type: 'array',
+      description: '2장부터 들어갈 내용. 3~4개.',
+      items: slideSchema('한 장에 들어갈 내용.', BODY_MAX),
+    },
+    caption: { type: 'string', description: '인스타 캡션. 3~5줄. 해시태그와 출처 제외.' },
+  },
+  required: ['suitable', 'rejectReason', 'hook', 'body', 'caption'],
+};
+
 const LOCAL_SCHEMA = {
   type: 'object',
   properties: {
@@ -216,6 +235,59 @@ ${recent}
 ${article.material}
 
 위 문서에서 사실을 뽑아 게시물 1건을 만드세요.`;
+}
+
+function newsPrompt(account, issue, recentLines) {
+  const p = account.persona;
+  const recent = recentLines.length
+    ? `\n# 최근에 이미 올린 것 (중복 금지)\n${recentLines.map((h) => `- ${h}`).join('\n')}\n`
+    : '';
+
+  return `당신은 인스타그램 이슈 계정 "${account.displayName}"의 캐러셀을 만듭니다.
+
+# 화자
+${p.who}
+
+# 말투
+${p.voice}
+
+# 절대 하지 말 것
+${p.avoid}
+
+# ★★ 첫 번째로 할 일 — 이 소재를 써도 되는지 판단
+아래 기사들을 읽고, 다음 중 하나라도 해당하면 suitable 을 false 로 두세요.
+- 사건·사고·범죄·수사·재판에 관한 것
+- 정치인, 정당, 선거, 국제 분쟁에 관한 것
+- 특정 개인이 식별되는 내용 (피해자, 당사자, 유명인 사생활)
+- 질병·죽음·재난 등 누군가 상처받을 수 있는 내용
+- 기사들끼리 내용이 어긋나 사실이 불분명한 것
+- 사실 확인 없이 단정하면 특정 기업·집단에 손해가 될 수 있는 것
+
+**애매하면 false 로 두세요.** 하루 쉬는 게 사고보다 낫습니다.
+false 일 때는 hook/body/caption 을 대충 채워도 됩니다. 어차피 쓰지 않습니다.
+
+# suitable 이 true 일 때만 아래를 지켜서 만드세요
+
+## 사실 취급 원칙
+- **여러 기사에 공통으로 나오는 사실**을 우선 쓰세요. 한 기사에만 있는 건 피하세요.
+- 기사에 없는 내용은 한 줄도 쓰면 안 됩니다. 배경지식으로 보충하지 마세요.
+- 숫자, 기관명, 지역명은 기사에 적힌 그대로.
+- **기사 문장을 그대로 옮기지 마세요.** 사실만 뽑아 당신의 문장으로 다시 쓰세요.
+- 추정은 추정으로 쓰세요. 기사가 "~로 보인다"면 단정하지 마세요.
+
+## 무엇이 좋은 이슈 카드인가
+독자가 궁금한 건 "무슨 일이 있었나"보다 **"왜 그렇게 됐나"** 입니다.
+현상만 나열하지 말고 원인과 과정을 짚으세요.
+  약함: ["올해 러브버그가", "줄었다"]
+  강함: ["러브버그 줄어든 건", "우연이 아니었다"]  ← 그럼 뭘 했는데?
+
+${CAROUSEL_RULES}
+${recent}
+# 기사들 (같은 이슈를 여러 매체가 보도한 것)
+
+${issue.material}
+
+위 기사들을 바탕으로 판단하고, 적합하면 게시물 1건을 만드세요.`;
 }
 
 function localPrompt(account, material, recentLines) {
@@ -465,12 +537,20 @@ export async function generateContent(account, material, recentLines = []) {
   const type = account.source?.type ?? 'ai';
   const isLocal = type === 'local';
   const isFacts = type === 'facts';
+  const isNews = type === 'news';
 
   let result;
   if (isLocal) result = await callGemini(localPrompt(account, material, recentLines), LOCAL_SCHEMA);
   else if (isFacts)
     result = await callGemini(factsPrompt(account, material, recentLines), FACTS_SCHEMA);
+  else if (isNews)
+    result = await callGemini(newsPrompt(account, material, recentLines), NEWS_SCHEMA);
   else result = await callGemini(humorPrompt(account, recentLines), HUMOR_SCHEMA);
+
+  // 필터를 통과했더라도 AI 가 부적합하다고 보면 그날은 발행하지 않습니다.
+  if (isNews && result.suitable === false) {
+    return { skip: true, reason: result.rejectReason || '(사유 미기재)' };
+  }
 
   const hook = toSlide(result.hook, 'hook', isLocal ? LOCAL_HOOK_MAX : HOOK_MAX);
   if (!hook) throw new Error('1장(후킹) 문구 생성에 실패했습니다');
@@ -487,9 +567,13 @@ export async function generateContent(account, material, recentLines = []) {
     meta: result.meta,
     slides,
     caption: result.caption,
-    // 사실 계정은 어디서 온 내용인지 캡션에 반드시 남깁니다.
+    // 어디서 온 내용인지 캡션에 반드시 남깁니다.
     // AI 에게 맡기면 빠뜨리므로 코드에서 붙입니다.
-    sourceNote: isFacts ? `출처: 위키백과 「${material.title}」` : undefined,
+    sourceNote: isFacts
+      ? `출처: 위키백과 「${material.title}」`
+      : isNews
+        ? `출처: ${material.outlets.join(', ')} 보도 종합`
+        : undefined,
     hashtags: pickHashtags(account),
   };
 }
