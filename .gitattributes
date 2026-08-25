@@ -1,0 +1,5 @@
+# 워크플로의 run 블록은 리눅스에서 bash 로 실행됩니다.
+# CRLF 로 체크아웃되면 줄 끝의 \r 때문에 스크립트가 깨지므로 LF 를 강제합니다.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
