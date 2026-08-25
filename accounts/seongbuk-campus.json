@@ -55,10 +55,5 @@
       "#정릉", "#길음", "#성북구맛집", "#안암맛집", "#고대앞",
       "#서울나들이", "#성북구행사", "#대학생", "#동네정보", "#보문동"
     ]
-  },
-
-  "secrets": {
-    "token": "IG_TOKEN_SEONGBUK_CAMPUS",
-    "userId": "IG_USER_ID_SEONGBUK_CAMPUS"
   }
 }

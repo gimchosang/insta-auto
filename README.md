@@ -73,9 +73,26 @@ Instagram API      캐러셀 컨테이너로 묶어 발행
 
 계정과 생성 개수를 고르면, 실행이 끝난 뒤 페이지 맨 아래 **Artifacts** 에서 카드 이미지를 내려받을 수 있습니다. 생성된 문구는 실행 요약에 바로 표시됩니다. 발행은 일어나지 않습니다.
 
+### IG_ACCOUNTS 형식
+
+계정마다 시크릿을 2개씩 만들지 않고, JSON 하나에 모읍니다:
+
+```json
+{
+  "univ-humor":      { "token": "IGAA...", "userId": "17841400000000000" },
+  "office-humor":    { "token": "IGAA...", "userId": "17841400000000001" },
+  "solo-life":       { "token": "IGAA...", "userId": "17841400000000002" },
+  "seongbuk-campus": { "token": "IGAA...", "userId": "17841400000000003" }
+}
+```
+
+키는 `accounts/*.json` 의 `id` 와 정확히 같아야 합니다.
+
+> **왜 이렇게 하냐면** — 워크플로에 `toJSON(secrets)` 로 시크릿 전체를 넘기면 계정 추가가 편하지만, 그 잡에서 도는 모든 코드(npm 의존성 포함)가 모든 시크릿을 읽을 수 있게 됩니다. GitHub 도 이 패턴을 위험으로 차단합니다. 계정 자격증명만 한 곳에 모으면 워크플로는 계속 고정이면서 노출 범위가 줄어듭니다.
+
 ## 계정 추가하기
 
-`accounts/_TEMPLATE.json` 을 복사해서 새 파일을 만들고, 시크릿 2개를 추가하면 끝입니다. **코드는 건드리지 않습니다.**
+`accounts/_TEMPLATE.json` 을 복사해서 새 파일을 만들고, `IG_ACCOUNTS` 에 항목 하나를 추가하면 끝입니다. **코드도 워크플로도 건드리지 않습니다.**
 
 지역 계정은 `source.region` 만 바꾸면 다른 구로 그대로 복제됩니다:
 
@@ -97,8 +114,7 @@ Instagram API      캐러셀 컨테이너로 묶어 발행
 |---|---|---|
 | Secret | `GEMINI_API_KEY` | 문구 생성 ([무료 발급](https://aistudio.google.com/apikey)) |
 | Secret | `SEOUL_API_KEY` | 지역 계정 소재 ([무료 발급](https://data.seoul.go.kr/together/mypage/actKeyList.do)) |
-| Secret | `IG_TOKEN_*` | 계정별 인스타 토큰 |
-| Secret | `IG_USER_ID_*` | 계정별 인스타 사용자 ID |
+| Secret | `IG_ACCOUNTS` | 계정별 토큰·ID를 담은 JSON **하나** (아래 참고) |
 | Secret | `GH_PAT` | 토큰 자동 갱신용 (없으면 갱신을 수동으로) |
 | Variable | `PAGES_BASE_URL` | 예: `https://아이디.github.io/insta-auto` |
 

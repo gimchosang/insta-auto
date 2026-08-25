@@ -125,19 +125,31 @@ https://graph.instagram.com/v23.0/me?fields=id,username&access_token=토큰
 { "id": "17841400000000000", "username": "내계정" }
 ```
 
-이 `id` 가 `IG_USER_ID_*` 에 넣을 값입니다.
+이 `id` 가 아래 JSON 의 `userId` 에 넣을 값입니다.
 
 ### 4-6. 시크릿 등록
-**Settings → Secrets and variables → Actions → Secrets**
 
-계정별로 2개씩 (이름은 `accounts/*.json` 의 `secrets` 항목과 정확히 같아야 합니다):
+계정별로 시크릿을 따로 만들지 않습니다. **`IG_ACCOUNTS` 하나에 전부 모읍니다.**
 
-| 계정 | 토큰 | 사용자 ID |
-|---|---|---|
-| 대학생 공감 | `IG_TOKEN_UNIV_HUMOR` | `IG_USER_ID_UNIV_HUMOR` |
-| 직장인 공감 | `IG_TOKEN_OFFICE_HUMOR` | `IG_USER_ID_OFFICE_HUMOR` |
-| 자취 생활 | `IG_TOKEN_SOLO_LIFE` | `IG_USER_ID_SOLO_LIFE` |
-| 성북 대학가 | `IG_TOKEN_SEONGBUK_CAMPUS` | `IG_USER_ID_SEONGBUK_CAMPUS` |
+**Settings → Secrets and variables → Actions → New repository secret**
+
+- Name: `IG_ACCOUNTS`
+- Secret: 아래 형식으로 작성 (준비된 계정만 넣으면 됩니다)
+
+```json
+{
+  "univ-humor":      { "token": "여기에_토큰", "userId": "여기에_ID" },
+  "office-humor":    { "token": "여기에_토큰", "userId": "여기에_ID" },
+  "solo-life":       { "token": "여기에_토큰", "userId": "여기에_ID" },
+  "seongbuk-campus": { "token": "여기에_토큰", "userId": "여기에_ID" }
+}
+```
+
+- 왼쪽 키(`univ-humor` 등)는 `accounts/*.json` 의 `id` 와 **정확히** 같아야 합니다
+- 계정을 추가할 때는 이 JSON 에 줄 하나만 더하면 됩니다. 워크플로는 안 고칩니다
+- 쉼표와 따옴표가 빠지면 실행 시 `IG_ACCOUNTS 시크릿이 올바른 JSON 이 아닙니다` 오류가 납니다
+
+> 계정마다 시크릿을 만들면 워크플로에 전달 줄을 계속 추가해야 하고, 그걸 피하려고 시크릿 전체를 넘기면 그 잡에서 도는 모든 코드(npm 의존성 포함)가 모든 시크릿을 읽게 됩니다. GitHub 도 그 패턴을 위험으로 차단합니다. 이 방식이 확장성과 안전을 둘 다 지킵니다.
 
 ---
 

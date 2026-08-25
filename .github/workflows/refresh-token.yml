@@ -32,7 +32,8 @@ jobs:
 
       - name: 토큰 갱신
         env:
-          ALL_SECRETS: ${{ toJSON(secrets) }}
+          IG_ACCOUNTS: ${{ secrets.IG_ACCOUNTS }}
+          IG_API_VERSION: ${{ vars.IG_API_VERSION }}
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: node src/refresh-tokens.js
 

@@ -43,10 +43,5 @@
       "#자취생", "#과제", "#기말고사", "#중간고사", "#대학생스타그램",
       "#도서관", "#휴학", "#복학", "#학점", "#졸업"
     ]
-  },
-
-  "secrets": {
-    "token": "IG_TOKEN_UNIV_HUMOR",
-    "userId": "IG_USER_ID_UNIV_HUMOR"
   }
 }

@@ -43,10 +43,5 @@
       "#상사", "#회식", "#워라밸", "#사회생활", "#직장인유머",
       "#월급", "#연차", "#퇴근", "#점심메뉴", "#사축"
     ]
-  },
-
-  "secrets": {
-    "token": "IG_TOKEN_OFFICE_HUMOR",
-    "userId": "IG_USER_ID_OFFICE_HUMOR"
   }
 }

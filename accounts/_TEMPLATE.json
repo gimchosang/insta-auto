@@ -51,10 +51,5 @@
     "fixed": ["#고정해시태그"],
     "poolSize": 5,
     "pool": ["#풀에서", "#매번", "#랜덤으로", "#뽑아씁니다"]
-  },
-
-  "secrets": {
-    "token": "IG_TOKEN_NEW_ACCOUNT",
-    "userId": "IG_USER_ID_NEW_ACCOUNT"
   }
 }

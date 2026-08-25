@@ -14,18 +14,11 @@ import { generateContent } from './generate.js';
 import { collectLocalItems, toMaterial } from './sources/local.js';
 import { renderSlides, publicUrl } from './render.js';
 import { publishPost, buildCaption, checkLimit } from './publish.js';
+import { credentialsFor } from './credentials.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const STATE_FILE = path.join(ROOT, 'state', 'published.json');
 const HISTORY_LIMIT = 40;
-
-// GitHub Actions 에서 전체 시크릿을 통째로 넘겨받습니다.
-// 이렇게 해두면 계정을 추가할 때 워크플로 파일을 고칠 필요가 없습니다.
-if (process.env.ALL_SECRETS) {
-  for (const [k, v] of Object.entries(JSON.parse(process.env.ALL_SECRETS))) {
-    if (!(k in process.env)) process.env[k] = v;
-  }
-}
 
 const argv = process.argv.slice(2);
 const DRY_RUN = argv.includes('--dry-run');
@@ -129,13 +122,14 @@ async function runAccount(account, state, now) {
   }
 
   // 4) 발행
-  const token = process.env[account.secrets.token];
-  const igUserId = process.env[account.secrets.userId];
-  if (!token || !igUserId) {
+  const creds = credentialsFor(account.id);
+  if (!creds) {
     throw new Error(
-      `시크릿이 없습니다: ${account.secrets.token} / ${account.secrets.userId}`
+      `IG_ACCOUNTS 시크릿에 "${account.id}" 항목이 없습니다. ` +
+        `{ "${account.id}": { "token": "...", "userId": "..." } } 형태로 추가하세요.`
     );
   }
+  const { token, userId: igUserId } = creds;
 
   const limit = await checkLimit(igUserId, token);
   console.log(`  · 발행 한도: ${limit.used}/${limit.total}`);
