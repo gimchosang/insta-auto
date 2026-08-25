@@ -10,6 +10,7 @@
     "fg": "#FFF7E8",
     "stroke": "#7A2B20",
     "hit": "#FFE812",
+    "hitStroke": "#7A2B20",
     "font": "jua"
   },
   "publishAt": "20:00",

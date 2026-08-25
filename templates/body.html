@@ -38,7 +38,10 @@
     padding: 30px 0;
   }
   .ln { white-space: nowrap; }
-  .ln.hit { color: {{hit}}; }
+  .ln.hit {
+    color: {{hit}};
+    -webkit-text-stroke-color: {{hitStroke}};
+  }
 
   .dots { display: flex; gap: 12px; }
   .dots i {

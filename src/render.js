@@ -39,9 +39,33 @@ const DEFAULT_STYLE = {
   bg: '#7FE8C4',
   fg: '#FF6FA5',
   stroke: '#FFFFFF',
-  hit: '#FFFFFF',
+  hit: '#0B5C46',
+  hitStroke: '#FFFFFF',
   font: 'jua',
 };
+
+const sameColor = (a, b) => String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+
+/**
+ * 색 조합을 확정합니다.
+ *
+ * 강조 글자색이 자기 테두리색이나 배경색과 같으면 글자가 통째로 뭉개져서
+ * 읽을 수 없게 됩니다. 계정을 늘리다 보면 실수하기 쉬운 지점이라
+ * 여기서 걸러내고 안전한 색으로 되돌립니다.
+ */
+function resolveStyle(account) {
+  const style = { ...DEFAULT_STYLE, ...(account.style ?? {}) };
+  if (!style.hitStroke) style.hitStroke = style.stroke;
+
+  if (sameColor(style.hit, style.hitStroke) || sameColor(style.hit, style.bg)) {
+    console.log(
+      `  ⚠ ${account.id}: 강조색(${style.hit})이 테두리/배경과 같아 읽을 수 없습니다. 본문색으로 대체합니다.`
+    );
+    style.hit = style.fg;
+    style.hitStroke = style.stroke;
+  }
+  return style;
+}
 
 function escapeHtml(s) {
   return String(s ?? '')
@@ -96,7 +120,7 @@ function fillTemplate(html, vars) {
  * @returns {Promise<Array<{absPath: string, relPath: string}>>} 슬라이드 순서대로
  */
 export async function renderSlides(account, content, dateStr, rootDir) {
-  const style = { ...DEFAULT_STYLE, ...(account.style ?? {}) };
+  const style = resolveStyle(account);
   const font = FONTS[style.font] ?? FONTS.jua;
   const handle = account.handle || `@${account.id.replace(/-/g, '_')}`;
 
@@ -135,6 +159,7 @@ export async function renderSlides(account, content, dateStr, rootDir) {
         fg: style.fg,
         stroke: style.stroke,
         hit: style.hit,
+        hitStroke: style.hitStroke,
         fontFamily: font.family,
         fontUrl: font.url,
         lines: buildLines(slide.lines, slide.emphasizeLine),

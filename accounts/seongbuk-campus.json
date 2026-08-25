@@ -10,6 +10,7 @@
     "fg": "#FFFFFF",
     "stroke": "#0A1F8C",
     "hit": "#FFE812",
+    "hitStroke": "#0A1F8C",
     "font": "dohyeon"
   },
   "publishAt": "18:00",

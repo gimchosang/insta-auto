@@ -9,7 +9,8 @@
     "bg": "#FFE812",
     "fg": "#141414",
     "stroke": "#FFFFFF",
-    "hit": "#FF3B30",
+    "hit": "#D91709",
+    "hitStroke": "#FFFFFF",
     "font": "blackhan"
   },
   "publishAt": "08:00",

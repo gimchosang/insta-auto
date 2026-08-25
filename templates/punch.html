@@ -30,8 +30,11 @@
   }
   .ln { white-space: nowrap; }
 
-  /* 강조 줄 — 색을 뒤집어 시선을 잡습니다 */
-  .ln.hit { color: {{hit}}; }
+  /* 강조 줄 — 글자색과 테두리색을 함께 바꿔야 뭉개지지 않습니다 */
+  .ln.hit {
+    color: {{hit}};
+    -webkit-text-stroke-color: {{hitStroke}};
+  }
 
   #handle {
     position: absolute;
