@@ -40,10 +40,15 @@ async function igFetch(pathname, params, method = 'POST') {
   return json;
 }
 
-/** 캡션 = 본문 + 빈 줄 + 해시태그 */
+/** 캡션 = 본문 + (출처) + 해시태그 */
 export function buildCaption(content) {
+  const parts = [content.caption.trim()];
+  if (content.sourceNote) parts.push('', content.sourceNote);
+
   const tags = (content.hashtags || []).join(' ');
-  return [content.caption.trim(), '', tags].join('\n').trim();
+  if (tags) parts.push('', tags);
+
+  return parts.join('\n').trim();
 }
 
 /** 남은 발행 가능 횟수 확인 (계정당 24시간 100건) */

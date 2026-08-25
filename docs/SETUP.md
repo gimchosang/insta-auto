@@ -138,14 +138,14 @@ https://graph.instagram.com/v23.0/me?fields=id,username&access_token=토큰
 
 ```json
 {
-  "univ-humor":      { "token": "여기에_토큰", "userId": "여기에_ID" },
-  "office-humor":    { "token": "여기에_토큰", "userId": "여기에_ID" },
-  "solo-life":       { "token": "여기에_토큰", "userId": "여기에_ID" },
+  "body-facts":      { "token": "여기에_토큰", "userId": "여기에_ID" },
+  "origin-facts":    { "token": "여기에_토큰", "userId": "여기에_ID" },
+  "nature-facts":       { "token": "여기에_토큰", "userId": "여기에_ID" },
   "seongbuk-campus": { "token": "여기에_토큰", "userId": "여기에_ID" }
 }
 ```
 
-- 왼쪽 키(`univ-humor` 등)는 `accounts/*.json` 의 `id` 와 **정확히** 같아야 합니다
+- 왼쪽 키(`body-facts` 등)는 `accounts/*.json` 의 `id` 와 **정확히** 같아야 합니다
 - 계정을 추가할 때는 이 JSON 에 줄 하나만 더하면 됩니다. 워크플로는 안 고칩니다
 - 쉼표와 따옴표가 빠지면 실행 시 `IG_ACCOUNTS 시크릿이 올바른 JSON 이 아닙니다` 오류가 납니다
 

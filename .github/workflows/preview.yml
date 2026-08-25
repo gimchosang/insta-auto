@@ -14,9 +14,9 @@ on:
         default: 'all'
         options:
           - all
-          - univ-humor
-          - office-humor
-          - solo-life
+          - body-facts
+          - origin-facts
+          - nature-facts
           - seongbuk-campus
       count:
         description: '계정당 생성 횟수 (한 번에 캐러셀 4~5장이 나옵니다)'

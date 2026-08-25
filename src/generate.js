@@ -66,6 +66,20 @@ const HUMOR_SCHEMA = {
   required: ['hook', 'body', 'caption'],
 };
 
+const FACTS_SCHEMA = {
+  type: 'object',
+  properties: {
+    hook: slideSchema('1장에 들어갈 후킹 문구.', HOOK_MAX),
+    body: {
+      type: 'array',
+      description: '2장부터 들어갈 사실. 3~4개. 각각 서로 다른 사실이어야 합니다.',
+      items: slideSchema('한 장에 들어갈 사실 하나.', BODY_MAX),
+    },
+    caption: { type: 'string', description: '인스타 캡션. 2~3줄. 해시태그와 출처 제외.' },
+  },
+  required: ['hook', 'body', 'caption'],
+};
+
 const LOCAL_SCHEMA = {
   type: 'object',
   properties: {
@@ -157,6 +171,51 @@ body 각 장은 같은 주제의 서로 다른 순간이어야 합니다. 같은
 실존 인물·학교·회사·브랜드를 실명으로 비하하지 마세요.
 
 지금 오늘의 게시물 1건을 만드세요.`;
+}
+
+function factsPrompt(account, article, recentLines) {
+  const p = account.persona;
+  const recent = recentLines.length
+    ? `\n# 최근에 이미 올린 것 (중복 금지)\n${recentLines.map((h) => `- ${h}`).join('\n')}\n`
+    : '';
+
+  return `당신은 인스타그램 지식 계정 "${account.displayName}"의 캐러셀을 만듭니다.
+
+# 화자
+${p.who}
+
+# 말투
+${p.voice}
+
+# 절대 하지 말 것
+${p.avoid}
+
+# ★★ 가장 중요한 규칙 — 지어내지 마세요
+아래 [문서]에 **실제로 적혀 있는 내용만** 사용하세요.
+
+- 문서에 없는 사실은 **한 줄도** 쓰면 안 됩니다. 알고 있는 것 같아도 쓰지 마세요.
+- 숫자, 연도, 이름은 문서에 적힌 그대로만 쓰세요. 반올림하거나 각색하지 마세요.
+- 문서 문장을 그대로 베끼지 말고, 사실만 뽑아 당신의 문장으로 다시 쓰세요.
+- 문서에서 흥미로운 사실이 3개도 안 나오면, body 를 2장으로 줄이세요.
+  억지로 채우려고 지어내는 것보다 짧은 게 낫습니다.
+
+# 무엇이 좋은 사실인가
+- **모르던 것**이어야 합니다. "커피는 카페인을 함유한다" 같은 건 아무도 안 봅니다.
+- **구체적인 수치나 메커니즘**이 있으면 강합니다. "왜 그런지" 한 단계 더 들어가세요.
+- 각 장은 **서로 다른 사실**이어야 합니다. 같은 내용을 말만 바꾸면 안 됩니다.
+
+${CAROUSEL_RULES}
+
+# 1장 후킹은 이렇게
+정답을 미리 말하지 말고 궁금하게 만드세요.
+  나쁜 예: ["카페인은 아데노신", "수용체를 막는다"]   ← 답을 다 말해버림
+  좋은 예: ["카페인은 잠을", "깨우는 게 아니다"]      ← 그럼 뭔데? 하고 넘김
+${recent}
+# 문서: ${article.title}
+
+${article.material}
+
+위 문서에서 사실을 뽑아 게시물 1건을 만드세요.`;
 }
 
 function localPrompt(account, material, recentLines) {
@@ -395,16 +454,23 @@ function pickHashtags(account) {
 
 /**
  * @param {object} account 계정 설정
- * @param {string|null} material 지역 계정용 원본 자료
+ * @param {object|string|null} material
+ *   - local : 행사 정보 문자열
+ *   - facts : collectFactArticle() 결과 객체 ({ title, material, url })
+ *   - 그 외 : null
  * @param {string[]} recentLines 최근 발행 문구 (중복 회피용)
- * @returns {Promise<{slides: Array, caption: string, hashtags: string[], tag?: string, meta?: Array}>}
+ * @returns {Promise<{slides: Array, caption: string, hashtags: string[], sourceNote?: string}>}
  */
 export async function generateContent(account, material, recentLines = []) {
-  const isLocal = account.source?.type === 'local';
+  const type = account.source?.type ?? 'ai';
+  const isLocal = type === 'local';
+  const isFacts = type === 'facts';
 
-  const result = isLocal
-    ? await callGemini(localPrompt(account, material, recentLines), LOCAL_SCHEMA)
-    : await callGemini(humorPrompt(account, recentLines), HUMOR_SCHEMA);
+  let result;
+  if (isLocal) result = await callGemini(localPrompt(account, material, recentLines), LOCAL_SCHEMA);
+  else if (isFacts)
+    result = await callGemini(factsPrompt(account, material, recentLines), FACTS_SCHEMA);
+  else result = await callGemini(humorPrompt(account, recentLines), HUMOR_SCHEMA);
 
   const hook = toSlide(result.hook, 'hook', isLocal ? LOCAL_HOOK_MAX : HOOK_MAX);
   if (!hook) throw new Error('1장(후킹) 문구 생성에 실패했습니다');
@@ -421,6 +487,9 @@ export async function generateContent(account, material, recentLines = []) {
     meta: result.meta,
     slides,
     caption: result.caption,
+    // 사실 계정은 어디서 온 내용인지 캡션에 반드시 남깁니다.
+    // AI 에게 맡기면 빠뜨리므로 코드에서 붙입니다.
+    sourceNote: isFacts ? `출처: 위키백과 「${material.title}」` : undefined,
     hashtags: pickHashtags(account),
   };
 }

@@ -3,7 +3,7 @@
  *
  *   node src/index.js                    실제 발행
  *   node src/index.js --dry-run          이미지만 만들고 발행은 안 함
- *   node src/index.js --account=univ-humor --force --dry-run   특정 계정 미리보기
+ *   node src/index.js --account=body-facts --force --dry-run   특정 계정 미리보기
  */
 
 import fs from 'node:fs/promises';
@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 import { generateContent } from './generate.js';
 import { collectLocalItems, toMaterial } from './sources/local.js';
+import { collectFactArticle } from './sources/facts.js';
 import { renderSlides, publicUrl } from './render.js';
 import { publishPost, buildCaption, checkLimit } from './publish.js';
 import { credentialsFor } from './credentials.js';
@@ -84,6 +85,19 @@ async function runAccount(account, state, now) {
   // 1) 소재 확보
   let material = null;
   let sourceItem = null;
+
+  if (account.source?.type === 'facts') {
+    // AI 가 사실을 지어내지 못하도록, 실제 문서를 먼저 확보해서 넘깁니다.
+    // usedItemIds 에 이미 다룬 문서 제목이 쌓여 있어 같은 문서를 반복하지 않습니다
+    const article = await collectFactArticle(account, entry.usedItemIds ?? []);
+    if (!article) {
+      console.log('  · 쓸 만한 문서를 못 찾았습니다 — 건너뜁니다');
+      return null;
+    }
+    material = article;
+    sourceItem = { id: article.title };
+    console.log(`  · 문서: ${article.title} (${article.material.length}자, 시드 "${article.seed}")`);
+  }
 
   if (account.source?.type === 'local') {
     const items = await collectLocalItems(account);

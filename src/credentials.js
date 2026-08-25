@@ -11,8 +11,8 @@
  *
  * IG_ACCOUNTS 형식:
  * {
- *   "univ-humor":  { "token": "IGAA...", "userId": "1784140..." },
- *   "office-humor":{ "token": "IGAA...", "userId": "1784140..." }
+ *   "body-facts":  { "token": "IGAA...", "userId": "1784140..." },
+ *   "origin-facts":{ "token": "IGAA...", "userId": "1784140..." }
  * }
  */
 
