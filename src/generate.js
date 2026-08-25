@@ -13,7 +13,24 @@
  */
 
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-const MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+
+/**
+ * 구글이 모델을 자주 갈아치우고 예전 모델을 종료시킵니다.
+ * 하나를 박아두면 어느 날 조용히 발행이 멈추므로, 후보를 순서대로 시도합니다.
+ * 무료 티어에서 어떤 모델이 열려 있는지도 계정마다 다를 수 있어서 이 방식이 안전합니다.
+ *
+ * 쓰고 싶은 모델이 정해져 있으면 GitHub Variables 에 GEMINI_MODEL 을 넣으면 됩니다.
+ */
+const MODEL_CANDIDATES = [
+  process.env.GEMINI_MODEL,
+  'gemini-3.5-flash',
+  'gemini-2.5-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-2.5-flash-lite',
+].filter(Boolean);
+
+// 한 번 성공한 모델을 기억해서 다음 호출부터는 곧바로 씁니다
+let activeModel = null;
 
 const HOOK_MAX = 9;
 const BODY_MAX = 14;
@@ -190,11 +207,56 @@ ${material}
 
 /* ── API 호출 ────────────────────────────────────────── */
 
+/** 모델 하나로 호출. 일시적 오류는 재시도하고, 모델 자체가 없으면 표시해서 올립니다. */
+async function callModel(model, key, body) {
+  const url = `${API_BASE}/${model}:generateContent?key=${key}`;
+  let lastErr;
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      // 모델이 없거나 이 키로 접근할 수 없음 → 재시도 말고 다음 후보로
+      if (res.status === 404 || res.status === 403) {
+        throw Object.assign(new Error(`${model}: ${res.status}`), { modelUnavailable: true });
+      }
+      if (res.status === 429 || res.status >= 500) {
+        throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 200)}`);
+      }
+      if (!res.ok) {
+        const text = (await res.text()).slice(0, 300);
+        // 잘못된 모델명이 400 으로 오는 경우도 있습니다
+        if (/model/i.test(text) && /not found|not supported|unsupported/i.test(text)) {
+          throw Object.assign(new Error(`${model}: ${text}`), { modelUnavailable: true });
+        }
+        throw Object.assign(new Error(`Gemini ${res.status}: ${text}`), { fatal: true });
+      }
+
+      const data = await res.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) throw new Error('Gemini 응답이 비었습니다: ' + JSON.stringify(data).slice(0, 300));
+      return JSON.parse(text);
+    } catch (err) {
+      if (err.fatal || err.modelUnavailable) throw err;
+      lastErr = err;
+      if (attempt < 3) {
+        const wait = attempt * 4000;
+        console.log(`  ↻ Gemini 재시도 ${attempt}/3 (${wait / 1000}초 후) — ${err.message}`);
+        await new Promise((r) => setTimeout(r, wait));
+      }
+    }
+  }
+  throw lastErr;
+}
+
 async function callGemini(prompt, schema) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error('GEMINI_API_KEY 가 없습니다. GitHub Secrets에 추가하세요.');
 
-  const url = `${API_BASE}/${MODEL}:generateContent?key=${key}`;
   const body = {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     generationConfig: {
@@ -205,39 +267,32 @@ async function callGemini(prompt, schema) {
     },
   };
 
-  let lastErr;
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  // 지난번에 성공한 모델이 있으면 그것부터
+  const order = activeModel
+    ? [activeModel, ...MODEL_CANDIDATES.filter((m) => m !== activeModel)]
+    : MODEL_CANDIDATES;
+
+  const tried = [];
+  for (const model of order) {
     try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      if (res.status === 429 || res.status >= 500) {
-        throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 200)}`);
+      const result = await callModel(model, key, body);
+      if (activeModel !== model) {
+        console.log(`  · Gemini 모델: ${model}`);
+        activeModel = model;
       }
-      if (!res.ok) {
-        throw Object.assign(new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 300)}`), {
-          fatal: true,
-        });
-      }
-
-      const data = await res.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) throw new Error('Gemini 응답이 비었습니다: ' + JSON.stringify(data).slice(0, 300));
-      return JSON.parse(text);
+      return result;
     } catch (err) {
-      if (err.fatal) throw err;
-      lastErr = err;
-      if (attempt < 3) {
-        const wait = attempt * 4000;
-        console.log(`  ↻ Gemini 재시도 ${attempt}/3 (${wait / 1000}초 후) — ${err.message}`);
-        await new Promise((r) => setTimeout(r, wait));
-      }
+      if (!err.modelUnavailable) throw err;
+      tried.push(model);
+      console.log(`  · ${model} 사용 불가 — 다음 후보로 넘어갑니다`);
     }
   }
-  throw lastErr;
+
+  throw new Error(
+    `사용 가능한 Gemini 모델이 없습니다. 시도한 모델: ${tried.join(', ')}\n` +
+      'https://ai.google.dev/gemini-api/docs/models 에서 현재 모델명을 확인하고 ' +
+      'GitHub Variables 의 GEMINI_MODEL 에 넣으세요.'
+  );
 }
 
 /* ── 후처리 ──────────────────────────────────────────── */
