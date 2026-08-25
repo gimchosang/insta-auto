@@ -40,10 +40,11 @@ async function igFetch(pathname, params, method = 'POST') {
   return json;
 }
 
-/** 캡션 = 본문 + (출처) + 해시태그 */
+/** 캡션 = 본문 + (출처) + (사진 출처) + 해시태그 */
 export function buildCaption(content) {
   const parts = [content.caption.trim()];
   if (content.sourceNote) parts.push('', content.sourceNote);
+  if (content.photoNote) parts.push(content.photoNote);
 
   const tags = (content.hashtags || []).join(' ');
   if (tags) parts.push('', tags);

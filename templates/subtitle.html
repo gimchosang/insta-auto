@@ -16,13 +16,21 @@
     overflow: hidden;
   }
 
-  /* 은은한 배경 결 — 사진 없이도 밋밋하지 않게 */
+  /* 배경 사진 — 정보는 자막이 전달하므로 어둡게 깔아 분위기만 냅니다 */
+  .photo {
+    position: absolute; inset: 0;
+    background-size: cover;
+    background-position: center;
+    filter: brightness(.38) saturate(.8);
+  }
+
+  /* 사진이 없을 때도 밋밋하지 않게 */
   body::before {
     content: '';
     position: absolute; inset: 0;
     background:
       radial-gradient(circle at 20% 15%, rgba(255,255,255,.06), transparent 45%),
-      radial-gradient(circle at 82% 88%, rgba(0,0,0,.18), transparent 50%);
+      radial-gradient(circle at 82% 88%, rgba(0,0,0,.28), transparent 50%);
   }
 
   .num {
@@ -68,6 +76,7 @@
 </style>
 </head>
 <body>
+  <div class="photo" style="{{photoStyle}}"></div>
   <div class="num">{{slideNo}}</div>
   <div id="stage">{{lines}}</div>
   <div class="dots">{{dots}}</div>

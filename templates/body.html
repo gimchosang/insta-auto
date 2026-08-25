@@ -16,6 +16,15 @@
     overflow: hidden;
   }
 
+  /* 배경 사진 — 글자가 주인공이므로 진하게 어둡게 깝니다 */
+  .photo {
+    position: absolute; inset: 0;
+    background-size: cover;
+    background-position: center;
+    filter: brightness(.4) saturate(.8);
+  }
+  .num, #stage, .dots { position: relative; z-index: 2; }
+
   /* 번호는 장식이 아니라 진행 표시입니다. 몇 장 남았는지 알려줍니다. */
   .num {
     align-self: flex-start;
@@ -52,6 +61,7 @@
 </style>
 </head>
 <body>
+  <div class="photo" style="{{photoStyle}}"></div>
   <div class="num">{{slideNo}}</div>
   <div id="stage"><div>{{lines}}</div></div>
   <div class="dots">{{dots}}</div>

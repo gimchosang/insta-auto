@@ -32,16 +32,19 @@ const MODEL_CANDIDATES = [
 // 한 번 성공한 모델을 기억해서 다음 호출부터는 곧바로 씁니다
 let activeModel = null;
 
-const HOOK_MAX = 9;
-const BODY_MAX = 14;
+// 실제 이슈 계정 카드를 재보면 본문은 한 줄 15자 안팎에 5줄까지 들어갑니다.
+// 이보다 조이면 카드가 휑해 보입니다.
+const HOOK_MAX = 12;
+const BODY_MAX = 18;
 const LOCAL_HOOK_MAX = 12;
+const MAX_LINES = 5;
 
-const slideSchema = (desc, maxLen) => ({
+const slideSchema = (desc, maxLen, minLines = 2) => ({
   type: 'object',
   properties: {
     lines: {
       type: 'array',
-      description: `${desc} 2~3줄로 자르고, 각 줄은 공백 포함 ${maxLen}자 이내.`,
+      description: `${desc} ${minLines}~${MAX_LINES}줄로 자르고, 각 줄은 공백 포함 ${maxLen}자 이내.`,
       items: { type: 'string' },
     },
     emphasizeLine: {
@@ -75,9 +78,14 @@ const FACTS_SCHEMA = {
       description: '2장부터 들어갈 사실. 3~4개. 각각 서로 다른 사실이어야 합니다.',
       items: slideSchema('한 장에 들어갈 사실 하나.', BODY_MAX),
     },
-    caption: { type: 'string', description: '인스타 캡션. 2~3줄. 해시태그와 출처 제외.' },
+    caption: { type: 'string', description: '인스타 캡션. 4~6줄. 해시태그와 출처 제외.' },
+    photoQuery: {
+      type: 'string',
+      description:
+        '카드 배경에 깔 스톡 사진 검색어. 영어 2~4단어. 예: "octopus underwater", "coffee beans macro"',
+    },
   },
-  required: ['hook', 'body', 'caption'],
+  required: ['hook', 'body', 'caption', 'photoQuery'],
 };
 
 const NEWS_SCHEMA = {
@@ -91,16 +99,21 @@ const NEWS_SCHEMA = {
     hook: slideSchema('1장에 들어갈 후킹 문구.', HOOK_MAX),
     body: {
       type: 'array',
-      description: '2장부터 들어갈 내용. 3~4개.',
-      items: slideSchema('한 장에 들어갈 내용.', BODY_MAX),
+      description: '2장부터 들어갈 내용. 4~6개.',
+      items: slideSchema('한 장에 들어갈 내용.', BODY_MAX, 3),
     },
     caption: {
       type: 'string',
       description:
         '인스타 캡션. 카드에 못 담은 상세 내용을 문단으로 풀어 씁니다. 6~10줄. 해시태그와 출처 제외.',
     },
+    photoQuery: {
+      type: 'string',
+      description:
+        '카드 배경에 깔 스톡 사진 검색어. 영어 2~4단어. 분위기만 담고 특정 인물·브랜드·로고는 피하세요. 예: "forest hiking trail", "apartment building night"',
+    },
   },
-  required: ['suitable', 'rejectReason', 'hook', 'body', 'caption'],
+  required: ['suitable', 'rejectReason', 'hook', 'body', 'caption', 'photoQuery'],
 };
 
 const LOCAL_SCHEMA = {
@@ -122,10 +135,10 @@ const LOCAL_SCHEMA = {
     },
     body: {
       type: 'array',
-      description: '2장부터 들어갈 상세 내용. 2~3개.',
-      items: slideSchema('한 장에 들어갈 문구.', BODY_MAX),
+      description: '2장부터 들어갈 상세 내용. 3~4개.',
+      items: slideSchema('한 장에 들어갈 문구.', BODY_MAX, 3),
     },
-    caption: { type: 'string', description: '인스타 캡션. 2~4줄. 해시태그 제외.' },
+    caption: { type: 'string', description: '인스타 캡션. 5~8줄. 해시태그 제외.' },
   },
   required: ['tag', 'hook', 'meta', 'body', 'caption'],
 };
@@ -147,9 +160,12 @@ const CAROUSEL_RULES = `
 - 마침표 금지. 물음표는 꼭 필요할 때만.
 
 ## 2장부터 (body)
-- 3~4장. 각 장 2~3줄, 각 줄 공백 포함 **${BODY_MAX}자 이내**.
+- **4~6장**. 각 장 **3~5줄**, 각 줄 공백 포함 **${BODY_MAX}자 이내**.
+- 줄 수가 적으면 카드가 휑해 보입니다. 담을 내용이 있으면 5줄까지 채우세요.
 - **한 장에 한 가지 이야기만** 담으세요.
   한 문장을 여러 장에 이어서 자르면 안 됩니다. 장마다 독립적으로 읽혀야 합니다.
+- 한 장 안에서는 줄이 이어져도 됩니다. 아래처럼 상황을 차곡차곡 쌓으세요.
+    ["작년 한국은 러브버그 천국", "사람이 지나갈 수 없을 만큼", "새까맣게 뒤덮였고", "전 국민이 난리가 났다"]
 - 1장에서 궁금하게 만든 것을 실제로 풀어주세요.
   후킹만 세고 내용이 없으면 다음부터 아무도 안 봅니다.
 - **마지막 장은 마무리 한 방**입니다. 가장 공감되는 것이나 반전을 놓으세요.
@@ -516,7 +532,7 @@ function tidyLines(lines, maxLen) {
     }
     out.push(line);
   }
-  return out.slice(0, 4);
+  return out.slice(0, MAX_LINES + 1);
 }
 
 function toSlide(raw, kind, maxLen) {
@@ -581,6 +597,7 @@ export async function generateContent(account, material, recentLines = []) {
     meta: result.meta,
     slides,
     caption: result.caption,
+    photoQuery: result.photoQuery,
     // 어디서 온 내용인지 캡션에 반드시 남깁니다.
     // AI 에게 맡기면 빠뜨리므로 코드에서 붙입니다.
     sourceNote: isFacts

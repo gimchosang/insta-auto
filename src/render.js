@@ -8,6 +8,7 @@
 import { chromium } from 'playwright';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { findPhoto } from './sources/photo.js';
 
 const SIZE = 1080;
 
@@ -118,7 +119,7 @@ function fillTemplate(html, vars) {
  * @param {object} content generate.js 결과 ({ slides, tag, meta, ... })
  * @param {string} dateStr YYYY-MM-DD
  * @param {string} rootDir 프로젝트 루트
- * @returns {Promise<Array<{absPath: string, relPath: string}>>} 슬라이드 순서대로
+ * @returns {Promise<{files: Array<{absPath: string, relPath: string}>, photo: object|null}>}
  */
 export async function renderSlides(account, content, dateStr, rootDir) {
   const style = resolveStyle(account);
@@ -133,6 +134,11 @@ export async function renderSlides(account, content, dateStr, rootDir) {
     }
     return cache.get(name);
   };
+
+  // 배경 사진은 게시물당 한 장만 받아서 모든 슬라이드에 공통으로 씁니다.
+  // 장마다 다른 사진을 쓰면 산만하고, API 호출도 늘어납니다.
+  const photo = account.usePhoto === false ? null : await findPhoto(content.photoQuery);
+  if (photo) console.log(`  · 배경 사진: "${content.photoQuery}" (${photo.photographer})`);
 
   const outDir = path.join(rootDir, 'docs', 'img', account.id);
   await fs.mkdir(outDir, { recursive: true });
@@ -171,6 +177,10 @@ export async function renderSlides(account, content, dateStr, rootDir) {
         handle: escapeHtml(handle),
         slideNo: String(i + 1),
         dots: buildDots(total, i),
+        // 사진이 없으면 배경 레이어를 아예 숨깁니다
+        photoStyle: photo
+          ? `background-image:url('${photo.url.replace(/'/g, '%27')}')`
+          : 'display:none',
       });
 
       await page.setContent(html, { waitUntil: 'networkidle', timeout: 30000 });
@@ -194,7 +204,7 @@ export async function renderSlides(account, content, dateStr, rootDir) {
     await browser.close();
   }
 
-  return results;
+  return { files: results, photo };
 }
 
 /**

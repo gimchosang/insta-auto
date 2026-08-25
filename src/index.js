@@ -16,6 +16,7 @@ import { collectFactArticle } from './sources/facts.js';
 import { collectNewsIssue } from './sources/news.js';
 import { renderSlides, publicUrl } from './render.js';
 import { publishPost, buildCaption, checkLimit } from './publish.js';
+import { photoCredit } from './sources/photo.js';
 import { credentialsFor } from './credentials.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -138,10 +139,10 @@ async function runAccount(account, state, now) {
   console.log(`  · 후킹: ${content.slides[0].lines.join(' / ')}`);
 
   // 3) 카드 렌더링 (캐러셀 전체)
-  const rendered = await renderSlides(account, content, now.date, ROOT);
+  const { files: rendered, photo } = await renderSlides(account, content, now.date, ROOT);
   console.log(`  · 렌더 완료: ${rendered.length}장`);
 
-  const caption = buildCaption(content);
+  const caption = buildCaption({ ...content, photoNote: photoCredit(photo) });
 
   if (DRY_RUN) {
     console.log('  · [드라이런] 발행 생략');

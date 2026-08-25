@@ -50,6 +50,7 @@ jobs:
           # 계정별 토큰은 IG_ACCOUNTS 하나에 JSON 으로 모여 있어서,
           # 계정을 늘려도 이 파일은 그대로입니다.
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           SEOUL_API_KEY: ${{ secrets.SEOUL_API_KEY }}
           IG_ACCOUNTS: ${{ secrets.IG_ACCOUNTS }}
           PAGES_BASE_URL: ${{ vars.PAGES_BASE_URL }}

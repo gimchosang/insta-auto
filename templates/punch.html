@@ -16,8 +16,18 @@
     overflow: hidden;
   }
 
+  /* 배경 사진 — 글자가 주인공이므로 진하게 어둡게 깝니다 */
+  .photo {
+    position: absolute; inset: 0;
+    background-size: cover;
+    background-position: center;
+    filter: brightness(.4) saturate(.8);
+  }
+
   /* 텍스트가 화면을 꽉 채웁니다. 장식은 넣지 않습니다. */
   #stage {
+    position: relative;
+    z-index: 2;
     width: 100%;
     text-align: center;
     font-family: {{fontFamily}};
@@ -38,6 +48,7 @@
 
   #handle {
     position: absolute;
+    z-index: 2;
     bottom: 30px;
     right: 38px;
     font-family: {{fontFamily}};
@@ -49,6 +60,7 @@
 </style>
 </head>
 <body>
+  <div class="photo" style="{{photoStyle}}"></div>
   <div id="stage">{{lines}}</div>
   <div id="handle">{{handle}}</div>
 

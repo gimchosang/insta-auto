@@ -51,6 +51,7 @@ jobs:
         env:
           # 미리보기는 발행을 하지 않으므로 인스타 토큰이 필요 없습니다.
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           SEOUL_API_KEY: ${{ secrets.SEOUL_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
         run: |
