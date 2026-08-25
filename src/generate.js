@@ -207,19 +207,46 @@ ${material}
 
 /* ── API 호출 ────────────────────────────────────────── */
 
+/**
+ * 구글이 키 형식을 바꾸는 중입니다.
+ *   AIza...  = Standard key (구형). 2026년 9월부터 거부됩니다.
+ *   AQ.Ab... = Authorization key (신형). AI Studio 신규 발급분은 전부 이쪽입니다.
+ *
+ * 공식 문서는 x-goog-api-key 헤더를 안내하고, 신형 키는 헤더 방식이 안전합니다.
+ * 다만 계정에 따라 한쪽만 통하는 사례가 보고돼 있어 두 방식을 순서대로 시도합니다.
+ *
+ * ※ 헤더와 쿼리를 동시에 보내면 "Multiple authentication credentials received" 로
+ *   거부되므로, 반드시 둘 중 하나만 써야 합니다.
+ */
+const AUTH_MODES = ['header', 'query'];
+let activeAuthMode = null;
+
+function buildRequest(model, key, body, mode) {
+  const headers = { 'Content-Type': 'application/json' };
+  let url = `${API_BASE}/${model}:generateContent`;
+
+  if (mode === 'header') headers['x-goog-api-key'] = key;
+  else url += `?key=${encodeURIComponent(key)}`;
+
+  return { url, init: { method: 'POST', headers, body: JSON.stringify(body) } };
+}
+
 /** 모델 하나로 호출. 일시적 오류는 재시도하고, 모델 자체가 없으면 표시해서 올립니다. */
-async function callModel(model, key, body) {
-  const url = `${API_BASE}/${model}:generateContent?key=${key}`;
+async function callModel(model, key, body, authMode) {
+  const { url, init } = buildRequest(model, key, body, authMode);
   let lastErr;
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      const res = await fetch(url, init);
 
+      // 인증 방식이 이 키와 안 맞음 → 다른 방식으로 다시 시도해볼 신호
+      if (res.status === 401) {
+        throw Object.assign(
+          new Error(`${authMode} 방식 인증 거부: ${(await res.text()).slice(0, 200)}`),
+          { authRejected: true }
+        );
+      }
       // 모델이 없거나 이 키로 접근할 수 없음 → 재시도 말고 다음 후보로
       if (res.status === 404 || res.status === 403) {
         throw Object.assign(new Error(`${model}: ${res.status}`), { modelUnavailable: true });
@@ -241,7 +268,7 @@ async function callModel(model, key, body) {
       if (!text) throw new Error('Gemini 응답이 비었습니다: ' + JSON.stringify(data).slice(0, 300));
       return JSON.parse(text);
     } catch (err) {
-      if (err.fatal || err.modelUnavailable) throw err;
+      if (err.fatal || err.modelUnavailable || err.authRejected) throw err;
       lastErr = err;
       if (attempt < 3) {
         const wait = attempt * 4000;
@@ -272,24 +299,49 @@ async function callGemini(prompt, schema) {
     ? [activeModel, ...MODEL_CANDIDATES.filter((m) => m !== activeModel)]
     : MODEL_CANDIDATES;
 
+  // 지난번에 통한 인증 방식이 있으면 그것부터
+  const modes = activeAuthMode
+    ? [activeAuthMode, ...AUTH_MODES.filter((m) => m !== activeAuthMode)]
+    : AUTH_MODES;
+
   const tried = [];
-  for (const model of order) {
-    try {
-      const result = await callModel(model, key, body);
-      if (activeModel !== model) {
-        console.log(`  · Gemini 모델: ${model}`);
-        activeModel = model;
+  const authErrors = [];
+
+  for (const mode of modes) {
+    for (const model of order) {
+      try {
+        const result = await callModel(model, key, body, mode);
+        if (activeModel !== model || activeAuthMode !== mode) {
+          console.log(`  · Gemini 모델: ${model} (인증: ${mode})`);
+          activeModel = model;
+          activeAuthMode = mode;
+        }
+        return result;
+      } catch (err) {
+        if (err.authRejected) {
+          // 이 인증 방식은 이 키에 안 맞습니다. 모델을 바꿔봐야 소용없으니 방식을 바꿉니다.
+          authErrors.push(err.message);
+          console.log(`  · ${mode} 인증 방식이 거부됨 — 다른 방식으로 시도합니다`);
+          break;
+        }
+        if (!err.modelUnavailable) throw err;
+        tried.push(model);
+        console.log(`  · ${model} 사용 불가 — 다음 후보로 넘어갑니다`);
       }
-      return result;
-    } catch (err) {
-      if (!err.modelUnavailable) throw err;
-      tried.push(model);
-      console.log(`  · ${model} 사용 불가 — 다음 후보로 넘어갑니다`);
     }
   }
 
+  if (authErrors.length) {
+    throw new Error(
+      'Gemini 인증에 실패했습니다. 헤더/쿼리 두 방식 모두 거부됐습니다.\n' +
+        `상세: ${authErrors.join(' | ')}\n` +
+        'GEMINI_API_KEY 값에 공백이 섞였는지 확인하고, 그래도 안 되면 ' +
+        'AI Studio 에서 키를 새로 발급해 보세요.'
+    );
+  }
+
   throw new Error(
-    `사용 가능한 Gemini 모델이 없습니다. 시도한 모델: ${tried.join(', ')}\n` +
+    `사용 가능한 Gemini 모델이 없습니다. 시도한 모델: ${[...new Set(tried)].join(', ')}\n` +
       'https://ai.google.dev/gemini-api/docs/models 에서 현재 모델명을 확인하고 ' +
       'GitHub Variables 의 GEMINI_MODEL 에 넣으세요.'
   );
